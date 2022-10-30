@@ -1,0 +1,191 @@
+import win.ui;
+import win;
+import sys.display;
+import sys.device;
+import fsys;
+/*DSG{{*/
+mainForm = win.form(text="realesrgan-gui-yeck";right=349;bottom=508;acceptfiles=1;border="dialog frame";edge=1;max=false)
+mainForm.add(
+JpgRadiobutton={cls="radiobutton";text="JPG";left=18;top=158;right=71;bottom=179;font=LOGFONT(name='Microsoft YaHei UI');group=1;z=7};
+PngRadiobutton={cls="radiobutton";text="PNG";left=84;top=158;right=137;bottom=179;checked=1;font=LOGFONT(name='Microsoft YaHei UI');z=8};
+TTAcheckbox={cls="checkbox";text="TTA模式（效果更好但会显著增加耗时）";left=18;top=331;right=253;bottom=357;font=LOGFONT(name='Microsoft YaHei UI');z=18};
+WebpRadiobutton={cls="radiobutton";text="WEBP";left=150;top=158;right=203;bottom=179;font=LOGFONT(name='Microsoft YaHei UI');z=9};
+animeVideoRadioButton={cls="radiobutton";text="realesr-animevideov3 (针对动漫视频)";left=18;top=276;right=272;bottom=303;font=LOGFONT(name='Microsoft YaHei UI');z=14};
+displayCardCombobox={cls="combobox";left=67;top=110;right=340;bottom=130;edge=1;font=LOGFONT(name='Microsoft YaHei UI');items={};mode="dropdownlist";z=20};
+edit={cls="edit";left=9;top=366;right=340;bottom=467;autohscroll=false;bgcolor=16777215;edge=1;font=LOGFONT(name='Microsoft YaHei UI');multiline=1;readonly=1;vscroll=1;z=21};
+exitButton={cls="button";text="退出";left=9;top=473;right=169;bottom=501;font=LOGFONT(name='Microsoft YaHei UI');z=22};
+ganx4plusAnimeRadioButton={cls="radiobutton";text="realesrgan-x4plus-anime（对动漫插画图像优化）";left=18;top=256;right=311;bottom=278;font=LOGFONT(name='Microsoft YaHei UI');z=13};
+ganx4plusRadioButton={cls="radiobutton";text="realesrgan-x4plus（默认）";left=18;top=216;right=272;bottom=235;checked=1;font=LOGFONT(name='Microsoft YaHei UI');group=1;z=11};
+groupbox={cls="groupbox";text="导出格式";left=9;top=136;right=340;bottom=191;font=LOGFONT(name='Microsoft YaHei UI');z=6};
+groupbox2={cls="groupbox";text="模型";left=9;top=194;right=340;bottom=304;font=LOGFONT(name='Microsoft YaHei UI');z=10};
+groupbox3={cls="groupbox";text="其他";left=8;top=309;right=340;bottom=359;font=LOGFONT(name='Microsoft YaHei UI');z=15};
+inputPathEditer={cls="edit";text="请将文件或文件夹直接拖拽入程序窗口";left=67;top=50;right=340;bottom=70;acceptfiles=1;dl=1;edge=1;z=4};
+levelcombobox={cls="combobox";left=274;top=158;right=326;bottom=178;edge=1;font=LOGFONT(name='Microsoft YaHei UI');items={"2倍";"3倍";"4倍"};mode="dropdownlist";z=16};
+netx4plueRadioButton={cls="radiobutton";text="realesrnet-x4plus";left=18;top=236;right=272;bottom=256;font=LOGFONT(name='Microsoft YaHei UI');z=12};
+outputPathEditer={cls="edit";left=67;top=81;right=340;bottom=101;acceptfiles=1;dl=1;edge=1;z=5};
+runButton={cls="button";text="运行";left=180;top=473;right=340;bottom=501;disabled=1;font=LOGFONT(name='Microsoft YaHei UI');z=23};
+static={cls="static";text="导入路径";left=9;top=50;right=72;bottom=71;font=LOGFONT(name='Microsoft YaHei UI');transparent=1;z=2};
+static2={cls="static";text="放大倍率";left=216;top=160;right=285;bottom=182;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=17};
+static3={cls="static";text="导出路径";left=9;top=81;right=78;bottom=103;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=3};
+static4={cls="static";text="GPU";left=20;top=111;right=89;bottom=133;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=19};
+title={cls="static";text="Realsrgan AI放大GUI by Yeck";left=9;top=8;right=321;bottom=39;font=LOGFONT(h=-20;name='Microsoft YaHei UI';weight=700);notify=1;transparent=1;z=1}
+)
+/*}}*/
+
+var firstStart = true
+var displayCardNames = {"自动选择"} 
+
+var getOutputFormat = function(){
+	if(mainForm.JpgRadiobutton.checked){
+		return "jpg"; 
+	}
+	if(mainForm.PngRadiobutton.checked){
+		return "png"; 
+	}
+	if(mainForm.WebpRadiobutton.checked){
+		return "webp"; 
+	}
+}
+
+
+var getDisplayCardNo = function(){
+	return mainForm.displayCardCombobox.selIndex; 
+}
+
+var getActivatedModel = function(){
+	if(mainForm.ganx4plusRadioButton.checked){
+		return "realesrgan-x4plus"; 
+	}
+	if(mainForm.netx4plueRadioButton.checked){
+		return "reaesrnet-x4plus"; 
+	}
+	if(mainForm.ganx4plusAnimeRadioButton.checked){
+		return "realesrgan-x4plus-anime"; 
+	}
+	if(mainForm.animeVideoRadioButton.checked){
+		return "realesr-animevideov3"; 
+	}
+}
+
+
+var updateOutputPath = function(){
+	// 根据导出参数设定导出文件路径
+	var path = mainForm.inputPathEditer.text
+	var outPath = path
+	var pathRes = ""
+	// 判断是否为目录
+	if(!io.exist(path)){
+		mainForm.runButton.disabled = true
+		mainForm.runButton.text = "输入路径错误"
+		return; 
+	}
+	mainForm.runButton.disabled = false
+	mainForm.runButton.text = "运行"
+	if(fsys.isDir(path)) {
+		outPath = outPath + "-out"
+	} else if(fsys.isDir(path) == 0){
+		var pathList = string.split(outPath, ".")
+		for(i = 1; table.len(pathList) - 1; 1){
+			if(i != 1){
+				pathRes = "." ++ pathRes ++ pathList[i]
+			} else {
+				pathRes = pathRes ++ pathList[i]
+			}
+		}
+		var addPath = "(" + getActivatedModel() + ")"
+		addPath = addPath + "(x" + (mainForm.levelcombobox.selIndex + 1) + ")"
+		pathRes = pathRes ++ addPath ++ "." ++ getOutputFormat()
+	} 
+	
+	mainForm.outputPathEditer.text = pathRes
+}
+
+
+mainForm.onActivate = function(state,hwndOther,minimized){
+	if(state){
+		if(firstStart == true){
+			firstStart = false // 防止重复激活时重复运行
+			// 程序执行时运行
+			mainForm.levelcombobox.selIndex = 3 // 修改放大倍率为4x
+			
+			// 遍历显卡列表，存入displayCardNames数组
+			sys.display.enumAdapters(
+			function(info,description,driverVersion){
+				table.push(displayCardNames, description)
+			})
+			
+			mainForm.displayCardCombobox.items = displayCardNames
+			mainForm.displayCardCombobox.selIndex = 1
+			
+		}
+	}
+}
+
+mainForm.wndproc = function(hwnd,message,wParam,lParam){
+	select(message) {
+		case 0x233/*_WM_DROPFILES*/{
+			// 窗口监听文件拖拽事件
+			path = win.getDropFile(wParam)[1]
+			// content = string.load(path)
+			// 为输入框赋值
+			mainForm.inputPathEditer.text = path
+			
+			// 更新导出路径
+			updateOutputPath()
+        }
+
+    }
+}
+
+mainForm.exitButton.oncommand = function(id,event){
+	win.quitMessage()
+}
+
+mainForm.inputPathEditer.onFocusLost = function(){
+	
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.levelcombobox.onListChange= function(){ 
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.JpgRadiobutton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.PngRadiobutton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.WebpRadiobutton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.ganx4plusRadioButton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.netx4plueRadioButton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.ganx4plusAnimeRadioButton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.animeVideoRadioButton.oncommand = function(id,event){
+	// 更新导出路径
+	updateOutputPath()
+}
+
+mainForm.show();
+return win.loopMessage();
