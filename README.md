@@ -20,6 +20,6 @@
 
 ### 📖介绍
 
-界面与调用部分使用[aardio]([aardio 编程语言 - 官网](https://aardio.com/))实现。
+界面与调用部分使用[aardio](https://aardio.com/)实现。
 
 内核来源自[Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)。
