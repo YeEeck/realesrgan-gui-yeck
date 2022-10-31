@@ -3,12 +3,13 @@ import win;
 import sys.display;
 import sys.device;
 import fsys;
+import process.popen
 /*DSG{{*/
 mainForm = win.form(text="realesrgan-gui-yeck";right=349;bottom=508;acceptfiles=1;border="dialog frame";edge=1;max=false)
 mainForm.add(
 JpgRadiobutton={cls="radiobutton";text="JPG";left=18;top=158;right=71;bottom=179;font=LOGFONT(name='Microsoft YaHei UI');group=1;z=7};
 PngRadiobutton={cls="radiobutton";text="PNG";left=84;top=158;right=137;bottom=179;checked=1;font=LOGFONT(name='Microsoft YaHei UI');z=8};
-TTAcheckbox={cls="checkbox";text="TTA模式（效果更好但会显著增加耗时）";left=18;top=331;right=253;bottom=357;font=LOGFONT(name='Microsoft YaHei UI');z=18};
+TTAcheckbox={cls="checkbox";text="TTA模式（体积更小但会显著增加耗时）";left=18;top=331;right=253;bottom=357;font=LOGFONT(name='Microsoft YaHei UI');z=18};
 WebpRadiobutton={cls="radiobutton";text="WEBP";left=150;top=158;right=203;bottom=179;font=LOGFONT(name='Microsoft YaHei UI');z=9};
 animeVideoRadioButton={cls="radiobutton";text="realesr-animevideov3 (针对动漫视频)";left=18;top=276;right=272;bottom=303;font=LOGFONT(name='Microsoft YaHei UI');z=14};
 displayCardCombobox={cls="combobox";left=67;top=110;right=340;bottom=130;edge=1;font=LOGFONT(name='Microsoft YaHei UI');items={};mode="dropdownlist";z=20};
@@ -28,12 +29,22 @@ static={cls="static";text="导入路径";left=9;top=50;right=72;bottom=71;font=L
 static2={cls="static";text="放大倍率";left=216;top=160;right=285;bottom=182;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=17};
 static3={cls="static";text="导出路径";left=9;top=81;right=78;bottom=103;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=3};
 static4={cls="static";text="GPU";left=20;top=111;right=89;bottom=133;font=LOGFONT(name='Microsoft YaHei UI');notify=1;transparent=1;z=19};
-title={cls="static";text="Realsrgan AI放大GUI by Yeck";left=9;top=8;right=321;bottom=39;font=LOGFONT(h=-20;name='Microsoft YaHei UI';weight=700);notify=1;transparent=1;z=1}
+title={cls="static";text="Real-ESRGAN GUI by Yeck";left=9;top=8;right=343;bottom=39;font=LOGFONT(h=-20;name='Microsoft YaHei UI';weight=700);notify=1;transparent=1;z=1}
 )
 /*}}*/
 
 var firstStart = true
 var displayCardNames = {"自动选择"} 
+var noCore = false
+
+var getTtaCheckbox = function(){
+	if(mainForm.TTAcheckbox.checked){
+		return true; 
+	} else {
+		return false; 
+	}
+	
+}
 
 var getOutputFormat = function(){
 	if(mainForm.JpgRadiobutton.checked){
@@ -69,6 +80,9 @@ var getActivatedModel = function(){
 
 
 var updateOutputPath = function(){
+	if(noCore){
+		return; 
+	}
 	// 根据导出参数设定导出文件路径
 	var path = mainForm.inputPathEditer.text
 	var outPath = path
@@ -100,6 +114,37 @@ var updateOutputPath = function(){
 	mainForm.outputPathEditer.text = pathRes
 }
 
+// 执行图片放大
+var runProcess = function(){
+	// 初始化命令
+	var command = '"' + io.fullpath('realesrgan-ncnn-vulkan.exe') + '" ' 
+	command = command + "-i " + ' "' + mainForm.inputPathEditer.text + '" '
+	command = command + "-o" + ' "' + mainForm.outputPathEditer.text + '" '
+	command = command + "-s " + (mainForm.levelcombobox.selIndex + 1) + " "
+	command = command + "-n " + getActivatedModel() + " "
+	command = command + "-f " + getOutputFormat() + " "
+	if(getDisplayCardNo() != 1){
+		command = command + "-g " + (getDisplayCardNo() - 2) + " "
+	}
+	if(getTtaCheckbox()){
+		command = command + "-x "
+	}
+	mainForm.edit.text = command + '\r\n'
+	mainForm.edit.print("--------------------")
+	// CMD管道
+	mainForm.runButton.disabled = true
+	mainForm.runButton.text = "处理中"
+	mainForm.edit.print("处理中...")
+	prcs = process.popen(command)
+	mainForm.edit.print(prcs.readAll())
+	prcs.write('exit\n')
+	mainForm.edit.print("处理完毕。")
+	mainForm.edit.print("--------------------")
+	mainForm.runButton.disabled = false
+	mainForm.runButton.text = "运行"
+}
+
+
 
 mainForm.onActivate = function(state,hwndOther,minimized){
 	if(state){
@@ -117,6 +162,12 @@ mainForm.onActivate = function(state,hwndOther,minimized){
 			mainForm.displayCardCombobox.items = displayCardNames
 			mainForm.displayCardCombobox.selIndex = 1
 			
+			if(!io.exist('realesrgan-ncnn-vulkan.exe')){
+				mainForm.runButton.disabled = true
+				noCore = true
+				mainForm.edit.print('未找到核心文件，请前往Github进行下载。\r\n下载地址：https://github.com/xinntao/Real-ESRGAN/releases/tag/v0.2.5.0')
+				mainForm.edit.print('下载完成并解压后，将本程序，即realesrgan-gui-yeck.exe复制到与realesrgan-ncnn-vulkan.exe同级目录即可。')
+			}
 		}
 	}
 }
@@ -185,6 +236,10 @@ mainForm.ganx4plusAnimeRadioButton.oncommand = function(id,event){
 mainForm.animeVideoRadioButton.oncommand = function(id,event){
 	// 更新导出路径
 	updateOutputPath()
+}
+
+mainForm.runButton.oncommand = function(id,event){
+	runProcess()
 }
 
 mainForm.show();
